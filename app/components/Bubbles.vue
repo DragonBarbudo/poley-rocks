@@ -4,9 +4,10 @@
     @pointerup="onEmitterPointerUp"
     @pointerleave="onEmitterPointerUp"
     @pointercancel="onEmitterPointerUp"
+    @pointermove="onEmitterPointerMove"
   >
-
-    <transition-group name="bubble-fade" tag="div">
+    <audio ref="bubbleAudio" src="/bubble.mp3" preload="auto" />
+    <transition-group name="bubble-fade" tag="div" v-if="isClient">
       <img
         v-for="bubble in bubbles"
         :key="bubble.id"
@@ -21,6 +22,8 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+const bubbleAudio = ref(null)
+let audioCtx = null
 
 
 import { nextTick } from 'vue'
@@ -29,10 +32,12 @@ import { nextTick } from 'vue'
 
 const bubbleImg = '/bubbles.svg'
 const bubbles = ref([])
+const isClient = ref(false)
 let bubbleId = 0
 let interval, burstTimeout, animationFrame
 let isPointerDown = false
 let pointerBubbleInterval = null
+let lastPointer = { x: null, y: null, rect: null }
 
 function randomBetween(min, max) {
   return Math.random() * (max - min) + min
@@ -97,19 +102,49 @@ function isBubbleOrButton(target) {
   return false
 }
 
+function playBubbleSound() {
+  if (!bubbleAudio.value) return
+  // Use Web Audio API for pitch control
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  const source = audioCtx.createBufferSource()
+  fetch(bubbleAudio.value.src)
+    .then(res => res.arrayBuffer())
+    .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
+    .then(audioBuffer => {
+      source.buffer = audioBuffer
+      // Randomize pitch between 0.92 and 1.08
+      source.playbackRate.value = 0.1 + Math.random() * 1.16
+      source.connect(audioCtx.destination)
+      source.start(0)
+    })
+}
+
 function onEmitterPointerDown(e) {
   if (isBubbleOrButton(e.target)) return
   isPointerDown = true
   const emitter = e.currentTarget
   const rect = emitter.getBoundingClientRect()
+  lastPointer.rect = rect
+  lastPointer.x = e.clientX
+  lastPointer.y = e.clientY
   function emitBubbles() {
     if (!isPointerDown) return
-    const x = ((e.clientX - rect.left) / rect.width) * 100
-    const yPx = e.clientY - rect.top
+    const x = ((lastPointer.x - rect.left) / rect.width) * 100
+    const yPx = lastPointer.y - rect.top
     createBubble(x, true, yPx)
+    playBubbleSound()
     pointerBubbleInterval = setTimeout(emitBubbles, 120)
   }
   emitBubbles()
+}
+
+function onEmitterPointerMove(e) {
+  if (!isPointerDown) return
+  if (!lastPointer.rect) return
+  lastPointer.x = e.clientX
+  lastPointer.y = e.clientY
 }
 
 function onEmitterPointerUp() {
@@ -152,6 +187,7 @@ function animateBubbles(now) {
 }
 
 onMounted(() => {
+  isClient.value = true
   interval = setInterval(() => createBubble(), 400)
   burstTimeout = setTimeout(randomBurst, randomBetween(3000, 7000))
   animationFrame = requestAnimationFrame(animateBubbles)
@@ -167,9 +203,9 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .bubbles-emitter {
-  position: fixed;
+  position: absolute;
   left: 0;
-  bottom: 0;
+  top: 0;
   width: 100vw;
   height: 100vh;
   pointer-events: auto;
@@ -180,6 +216,10 @@ onBeforeUnmount(() => {
   will-change: transform, opacity;
   opacity: 0.8;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 /* Keyframes removed: now handled by JS */
 .bubble-fade-enter-active, .bubble-fade-leave-active {

@@ -1,10 +1,10 @@
 <template>
   <div>
     <header>
-        <h1 class="w-80 mx-w-full mx-auto my-8">
-            <img src="assets/images/poley-octo.webp" ref="octo" alt="Poley Rocks Logo" class="w-full"/>
+        <div class="w-80 mx-w-full mx-auto my-8">
+            <img src="assets/images/poley-octo.webp" ref="octo" alt="Poley Rocks Logo" class="w-full" />
             <img src="assets/images/poley-text.svg" alt="Poley Rocks Logo" class="w-full -mt-16 relative z-10"/>
-        </h1>
+        </div>
     </header>
   </div>
 </template>
