@@ -1,6 +1,6 @@
 <template>
     <div class="w-full">
-        <canvas ref="canvasEl" class=" w-full block" style="aspect-ratio: 8/3;"/>
+    <canvas ref="canvasEl" class="w-full block"/>
     </div>
 </template>
 
@@ -11,17 +11,54 @@ const canvasEl = ref();
 let k = null;
 let resizeObserver = null;
 
+function isMobile() {
+    // Responsive detection: treat as mobile if width < 620px
+    return window.innerWidth < 620;
+}
+
 function resizeGame() {
     const parent = canvasEl.value.parentElement;
     const width = parent.offsetWidth;
-    const height = Math.round(width * 3 / 6); // 8:3 aspect ratio
+    let height;
+    if (isMobile()) {
+        height = width; // 1:1 aspect ratio for mobile
+    } else {
+        height = Math.round(width * 3 / 8); // 8:3 aspect ratio for desktop
+    }
     canvasEl.value.width = width;
     canvasEl.value.height = height;
     if (k && k.resize) k.resize(width, height);
 }
 onMounted(() => {
     resizeGame();
-    k = kaplay({ canvas: canvasEl.value, width: canvasEl.value.width, height: canvasEl.value.height, narrowPhaseCollisionAlgorithm: "sat", background: [135, 206, 235] });
+    k = kaplay(
+        { canvas: canvasEl.value,
+            width: canvasEl.value.width,
+            height: canvasEl.value.height,
+            narrowPhaseCollisionAlgorithm: "sat",
+            background: [135, 206, 235],
+            buttons: {
+                jump: {
+                    keyboard: ["space", "up"],
+                    gamepad: ["dpad-up"],
+                },
+                left: {
+                    keyboard: ["left", "a"],
+                    gamepad:  ["dpad-left"],
+                },
+                right: {
+                    keyboard: ["right", "d"],
+                    gamepad: ["dpad-right"],
+                },
+                leftM: {
+                    mouse: ["left"]
+                },
+                rightM: {
+                    mouse: ["left"]
+                },
+                release: {}
+            },
+        });
 
 
 
@@ -112,6 +149,8 @@ const JUMP_FORCE = 1320;
 const MOVE_SPEED = 480;
 const FALL_DEATH = 2400;
 
+let directionButton = null
+
 
 setLayers(["background", "game", "foreground"], "game")
 
@@ -123,7 +162,7 @@ const LEVELS = [
         "       $$                           ",
         " %    ===                           ",
         "                                    ",
-        "       > =                         @",
+        "        =>                         @",
         "====================================",
         "------------------------------------",
     ],
@@ -237,6 +276,59 @@ const levelConf = {
     },
 };
 
+
+
+
+function addButton(
+    txt = "start game",
+    p = vec2(200, 100),
+    f = () => debug.log("hello"),
+    directionBtn = null
+) {
+    // add a parent background object
+    const btn = add([
+        rect(80, 80, { radius: 8 }),
+        pos(p),
+        area(),
+        scale(1),
+        anchor("center"),
+        outline(4),
+        color(255, 255, 255),
+        fixed(),
+        layer("foreground"),
+    ]);
+
+    // add a child object that displays the text
+    btn.add([
+        text(txt),
+        anchor("center"),
+        color(0, 0, 0),
+    ]);
+
+    // onHoverUpdate() comes from area() component
+    // it runs every frame when the object is being hovered
+    btn.onHoverUpdate(() => {
+        const t = time() * 10;
+        btn.color = hsl2rgb((t / 10) % 1, 0.6, 0.7);
+        btn.scale = vec2(1.2);
+        setCursor("pointer");
+        directionButton = directionBtn
+    });
+
+    // onHoverEnd() comes from area() component
+    // it runs once when the object stopped being hovered
+    btn.onHoverEnd(() => {
+        btn.scale = vec2(1);
+        btn.color = rgb();
+        directionButton = null
+    });
+
+    // onClick() comes from area() component
+    // it runs once when the object is clicked
+    btn.onClick(f);
+    return btn;
+}
+
 scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
     // add level to scene
     const level = addLevel(LEVELS[levelId ?? 0], levelConf);
@@ -247,6 +339,12 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
             if (coin.play) coin.play("run");
         });
     }
+
+
+    addButton("←", vec2(58, height()-58), () => null, "left");
+    addButton("→", vec2(width()-58, height()-58), () => null, "right");
+    addButton("↑", vec2((width()/2), height()-58), () => pressButton("jump"));
+
 
     // define player object
     const player = add([
@@ -372,36 +470,18 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
     }
 
     // jump with space
-    onKeyPress("space", jump);
-
-    onKeyDown("left", () => {
-        player.move(-MOVE_SPEED, 0);
-    });
-
-    onKeyDown("right", () => {
-        player.move(MOVE_SPEED, 0);
-    });
-
-    onKeyPress("down", () => {
-        player.gravityScale = 3;
-    });
-
-    onKeyRelease("down", () => {
-        player.gravityScale = 1;
-    });
-
-    onGamepadButtonPress("south", jump);
-
-    onGamepadStick("left", (v) => {
-        player.move(v.x * MOVE_SPEED, 0);
-    });
-
-    onKeyPress("f", () => {
-        setFullscreen(!isFullscreen());
-    });
 
 
+    //onKeyPress("space", jump);
+    onButtonPress("jump", jump)
+    onButtonDown("left", () => { player.move(-MOVE_SPEED, 0); })
+    onButtonDown("right", () => { player.move(MOVE_SPEED, 0); })
+    onButtonDown("release", () => { player.move(0, 0); })
+    
+    onButtonDown("leftM", () => { if(directionButton=='left'){ player.move(-MOVE_SPEED, 0); } })
+    onButtonDown("rightM", () => { if(directionButton=='right'){ player.move(MOVE_SPEED, 0); } })
 
+  
 
     const background = add([
         sprite("bg"),
