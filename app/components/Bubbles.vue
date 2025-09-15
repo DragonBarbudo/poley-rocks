@@ -209,7 +209,7 @@ onBeforeUnmount(() => {
   width: 100vw;
   height: 100vh;
   pointer-events: auto;
-  z-index: 10;
+  z-index: 0;
   overflow: hidden;
 }
 .bubble {

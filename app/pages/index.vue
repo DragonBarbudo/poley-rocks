@@ -1,6 +1,8 @@
 <template>
   <Banner15 />
   <Plataformer />
+  <Gallery />
+  <ChocolateRating />
 </template>
 
 

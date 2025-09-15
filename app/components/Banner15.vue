@@ -1,6 +1,6 @@
 <template>
-<div class="hero min-h-[300px] bg-gradient-to-r from-green-500 via-yellow-500 to-red-800 text-white">
-    <div class="hero-content text-center">
+<div class="hero min-h-[300px] p-5">
+    <div class="hero-content text-center bg-gradient-to-r from-green-500 via-yellow-500 to-red-800 text-white w-full rounded-3xl py-10">
         <div class="max-w-xl">
             <div class="font-bold drop-shadow-lg">
                 <div class="text-white font-extrabold text-3xl md:text-5xl">Este 15 de Septiembre</div>

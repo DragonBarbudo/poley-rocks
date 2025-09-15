@@ -1,7 +1,21 @@
+
 <template>
-    <div class="w-full">
+<div class="p-5 w-full relative z-50">
+    <div class="text-center text-brown-800">
+    <div class=" font-bold mb-4 text-xl md:text-3xl">
+        Un jueguito con Poley!
+    </div>
+    <div class="text-lg md:text-xl opacity-70">
+        Usa las flechas para moverte o presiona los botones.
+    </div>
+    </div>
+    <div class="w-full  mx-auto rounded-xl overflow-hidden">
+        <div>
+            
+        </div>
     <canvas ref="canvasEl" class="w-full block"/>
     </div>
+</div>
 </template>
 
 <script setup>
@@ -29,6 +43,25 @@ function resizeGame() {
     canvasEl.value.height = height;
     if (k && k.resize) k.resize(width, height);
 }
+
+
+// Custom kaboom effect function
+function addKaboomy(position) {
+    // Add the kaboom sprite at the given position
+    const kaboom = add([
+        sprite("kaboom"),
+        pos(position),
+        anchor("center"),
+        layer("foreground"),
+    ]);
+    kaboom.play("explode")
+    setTimeout(() => {
+        destroy(kaboom);
+    }, 500); // Adjust time based on animation length
+
+    return kaboom;
+}
+
 onMounted(() => {
     resizeGame();
     k = kaplay(
@@ -36,7 +69,7 @@ onMounted(() => {
             width: canvasEl.value.width,
             height: canvasEl.value.height,
             narrowPhaseCollisionAlgorithm: "sat",
-            background: [135, 206, 235],
+            background: [4, 153, 220],
             buttons: {
                 jump: {
                     keyboard: ["space", "up"],
@@ -65,7 +98,12 @@ onMounted(() => {
 // load assets
 loadSprite("poley", "/plataformer/poley.png");
 loadSprite("bag", "/plataformer/poley64.png");
-loadSprite("ghosty", "/plataformer/enemy1.png");
+loadSprite("enemy1", "/plataformer/enemy1.png");
+loadSprite("enemy2", "/plataformer/enemy2.png");
+loadSprite("enemy3", "/plataformer/enemy3.png");
+loadSprite("enemy4", "/plataformer/enemy4.png");
+
+
 loadSprite("spike", "/plataformer/poley64.png");
 loadSprite("grass", "/plataformer/grass.png");
 loadSprite("ocean", "/plataformer/ocean.png");
@@ -81,6 +119,9 @@ loadSound("hit", "/plataformer/hit.mp3");
 loadSound("portal", "/plataformer/bubble.mp3");
 
 loadSprite("bg", "/plataformer/bg.png");
+loadSprite("gameover", "/plataformer/gameover.png");
+loadSprite("win", "/plataformer/win.png");
+loadSprite("kaboom", "/plataformer/kaboom.png", {sliceX: 4, sliceY: 1, anims: { "explode": { from: 0, to: 3, speed: 8, loop: false } } });
 
 
 
@@ -93,6 +134,30 @@ function customPatrol(speed = 60, dir = 1) {
         require: ["pos", "area"],
         add() {
             this.on("collide", (obj, col) => {
+                if (col.isLeft()) {
+                    dir = 1;
+                }
+                else if (col.isRight()) {
+                    dir = -1;
+                    setTimeout(() => {
+                    this.jump(200)
+                }, Math.random()*500);    
+                }
+                
+            });
+        },
+        update() {
+            this.move(speed * dir, 0);
+        },
+    };
+}
+function customPatrolJumper(speed = 60, dir = 1) {
+    return {
+        id: "patrol",
+        require: ["pos", "area"],
+        add() {
+            this.on("collide", (obj, col) => {
+                this.jump()
                 if (col.isLeft()) {
                     dir = 1;
                 }
@@ -157,37 +222,39 @@ setLayers(["background", "game", "foreground"], "game")
 
 const LEVELS = [
     [
-        "    $                               ",
-        "   ==                               ",
-        "       $$                           ",
-        " %    ===                           ",
-        "                                    ",
-        "        =>                         @",
-        "====================================",
-        "------------------------------------",
+        "   $$                  $    $                   $$$$$$$$    =       ",
+        "   ==                  ==   ==                ========      =       ",
+        "       $$              ==   ==              =========       =       ",
+        "       ===       %                         ==========       =       ",
+        "                                          ===               =       ",
+        "       @ => 2 2  =   1   1   1     ==     ====        3     @=       ",
+        "====================================   ======================       ",
+        "--------------------------------------------------------------------",
     ],
     [
-        "                          $",
-        "                          $",
-        "                          $",
-        "                          $",
-        "                          $",
-        "           $$         =   $",
-        "  %      ====         =   $",
+        "     $$$$$$                ",
+        "     $$$$$$                ",
+        "                           ",
+        "                =         $",
+        "                   =      $",
+        "        = $$ 1=            $",
+        "  %      ======           $",
         "                      =   $",
         "                      =    ",
-        "       ^^      = >    =   @",
+        "       2  2    = 4  1 =   @",
         "===========================",
+        "---------------------------",
     ],
     [
         "     $    $    $    $     $",
         "     $    $    $    $     $",
-        "                           ",
-        "                           ",
-        "                           ",
-        "                           ",
-        "                           ",
-        " ^^^^>^^^^>^^^^>^^^^>^^^^^@",
+        "     $ == $ == $  = $     $",
+        "     $    $    $    $    =$",
+        "     $    $    $    $   ==$",
+        "     $    $    $    $  ===$",
+        "     $    $    $    $ ====$",
+        "                     =====$",
+        "      1 2 3 4 1 2 3 ======@",
         "===========================",
     ],
 ];
@@ -207,7 +274,6 @@ const levelConf = {
         ],
         "-": () => [
             sprite("ocean"),
-            area(),
             body({ isStatic: true }),
             offscreen({ hide: true }),
             anchor("bot"),
@@ -251,8 +317,35 @@ const levelConf = {
             offscreen({ hide: true }),
             "apple",
         ],
-        ">": () => [
-            sprite("ghosty"),
+        "1": () => [
+            sprite("enemy1"),
+            area(),
+            anchor("bot"),
+            body(),
+            customPatrolJumper(),
+            offscreen({ hide: true }),
+            "enemy",
+        ],
+        "2": () => [
+            sprite("enemy2"),
+            area(),
+            anchor("bot"),
+            body(),
+            customPatrol(),
+            offscreen({ hide: true }),
+            "enemy",
+        ],
+        "3": () => [
+            sprite("enemy3"),
+            area(),
+            anchor("bot"),
+            body(),
+            customPatrol(),
+            offscreen({ hide: true }),
+            "enemy",
+        ],
+        "4": () => [
+            sprite("enemy4"),
             area(),
             anchor("bot"),
             body(),
@@ -333,6 +426,8 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
     // add level to scene
     const level = addLevel(LEVELS[levelId ?? 0], levelConf);
 
+    let hasApple = false;
+
     // Play coin animation for all coins
     if (level.getAll) {
         level.getAll("coin").forEach((coin) => {
@@ -388,6 +483,7 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 
     player.onCollide("portal", () => {
         play("portal");
+
         if (levelId + 1 < LEVELS.length) {
             go("game", {
                 levelId: levelId + 1,
@@ -401,22 +497,32 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 
     player.onGround((l) => {
         if (l.is("enemy")) {
-            player.jump(JUMP_FORCE * 1.5);
+            player.jump(JUMP_FORCE*.7);
+            addKaboomy(l.pos);
             destroy(l);
-            addKaboom(player.pos);
             play("powerup");
         }
     });
 
     player.onCollide("enemy", (e, col) => {
         // if it's not from the top, die
-        if (!col?.isBottom()) {
-            go("lose");
-            play("hit");
+        if(!player.isBig()){
+
+            if (!col?.isBottom()) {
+                go("lose");
+                play("hit");
+            }
+        } else {
+
+
+            addKaboomy(e.pos);
+            destroy(e);
+            play("powerup");
         }
+        
     });
 
-    let hasApple = false;
+    
 
     // grow an apple if player's head bumps into an obj with "prize" tag
     player.onHeadbutt((obj) => {
@@ -495,17 +601,33 @@ scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
 });
 
 scene("lose", () => {
-    add([
-        text("You Lose"),
+
+
+    let gameover = add([
+        sprite("gameover"),
+        pos(0, 0),
+        fixed(),
+        layer("background"),
+        scale(width()/1800)
     ]);
-    onKeyPress(() => go("game"));
+
+
+    setTimeout(()=>{
+        go("game");
+    }, 1500)
 });
 
 scene("win", () => {
-    add([
-        text("You Win"),
+    let win = add([
+        sprite("win"),
+        pos(0, 0),
+        fixed(),
+        layer("background"),
+        scale(width()/1800)
     ]);
-    onKeyPress(() => go("game"));
+    setTimeout(()=>{
+        go("game");
+    }, 1500)
 });
 
 go("game");

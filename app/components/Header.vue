@@ -1,7 +1,7 @@
 <template>
   <div>
     <header>
-        <div class="w-80 mx-w-full mx-auto my-8">
+        <div class="w-80 mx-w-full mx-auto py-8">
             <img src="assets/images/poley-octo.webp" ref="octo" alt="Poley Rocks Logo" class="w-full" />
             <img src="assets/images/poley-text.svg" alt="Poley Rocks Logo" class="w-full -mt-16 relative z-10"/>
         </div>

@@ -1,5 +1,5 @@
 <template>
-    <div class="w-full">
+    <div class="w-full relative z-50">
         <canvas ref="canvasEl" class="border border-black w-full block" style="aspect-ratio: 8/3;"/>
     </div>
 </template>
